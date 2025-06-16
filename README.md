@@ -4,8 +4,8 @@ Title: Fermat Near Miss Finder
 File: fermat_near_miss.py
 External files required: None
 External files created: None
-Programmers: Alice Smith (asmith@example.edu), Bob Lee (blee@example.edu)
-Course: CS101 - Section 2
+Programmers: Keba Paul (kebapaul@lewisu.edu)
+Course: SU25-CPSC-60500-001
 Date Submitted: 2025-06-15
 
 Description:
@@ -22,77 +22,92 @@ Resources Used:
 - https://realpython.com/python-int-sequence/#finding-the-closest-integer
 """
 
-# Importing required standard library
-import math
 
-def main():
-    # Prompt user for exponent n and upper bound k
-    print("Fermat Near Miss Finder")
-    print("-----------------------")
+# Get the exponent "n" from the user.
+# I'm going to loop until we get a valid integer in the desired range.
+while True:
+    try:
+        user_input = input("Enter exponent n (3 <= n < 12): ")
+        exponent_n = int(user_input)  # converting input to integer
+        if 3 <= exponent_n < 12:
+            break
+        else:
+            print("Error: n must be an integer between 3 and 11 (inclusive).")
+    except ValueError:
+        print("Invalid input. Please type a legitimate integer.")
 
-    # Input validation for exponent n
-    while True:
-        try:
-            n = int(input("Enter exponent n (3 <= n < 12): "))
-            if 2 < n < 12:
-                break
+# Now, get the maximum value for x and y. We require it to be > 10.
+while True:
+    try:
+        k_str = input("Enter maximum value for x and y (must be > 10): ")
+        upper_bound = int(k_str)
+        if upper_bound > 10:
+            break
+        else:
+            print("Error: Maximum value must be greater than 10.")
+    except ValueError:
+        print("Invalid input. Please enter an integer.")
+
+# Initializing tracking variables for the best near-miss we find
+min_relative_error = float('inf')  # This will hold the smallest ratio of miss/lhs we see
+opt_x = 0  # Best x value found so far
+opt_y = 0  # Best y value found so far
+opt_z = 0  # Best z value guess
+best_absolute_miss = 0  # The smallest absolute miss encountered
+
+# Now, we iterate over all x, y pairs within our permitted range.
+for curr_x in range(10, upper_bound + 1):
+    for curr_y in range(10, upper_bound + 1):
+        # Compute the left-hand side: x^n + y^n. (I could've stored power values but this is fine)
+        lhs_value = curr_x ** exponent_n + curr_y ** exponent_n
+
+        # I try to estimate z by taking the nth-root of lhs_value.
+        approx_z = int(lhs_value ** (1 / exponent_n))
+        
+        # Sometimes, the true near integer is one more, so we compute both candidates:
+        approx_z_power = approx_z ** exponent_n
+        candidate_next_power = (approx_z + 1) ** exponent_n
+
+        # Calculate the absolute difference ("miss") for both candidate z values.
+        diff_with_approx = abs(lhs_value - approx_z_power)
+        diff_with_next = abs(candidate_next_power - lhs_value)
+        
+        # Find which candidate gives the smaller miss:
+        current_miss = diff_with_approx if diff_with_approx < diff_with_next else diff_with_next
+
+        # For the relative miss, we compare the error to the value of the left-hand side.
+        current_relative = current_miss / lhs_value
+
+        # Update our best record if we found a better near miss.
+        if current_relative < min_relative_error:
+            min_relative_error = current_relative
+            
+            opt_x = curr_x
+            opt_y = curr_y
+            # Decide which candidate was closer:
+            if diff_with_approx < diff_with_next:
+                opt_z = approx_z
             else:
-                print("Error: n must be an integer between 3 and 11 (inclusive).")
-        except ValueError:
-            print("Invalid input. Please enter an integer.")
+                opt_z = approx_z + 1
+                
+            best_absolute_miss = current_miss
 
-    # Input validation for upper limit k
-    while True:
-        try:
-            k = int(input("Enter maximum value for x and y (must be > 10): "))
-            if k > 10:
-                break
-            else:
-                print("Error: k must be greater than 10.")
-        except ValueError:
-            print("Invalid input. Please enter an integer.")
+            # I print a new record each time we update, to let the user follow along.
+            print("\nNew smallest relative miss found:")
+            print("x =", opt_x, ", y =", opt_y, ", z =", opt_z, ", n =", exponent_n)
+            print("Absolute miss =", best_absolute_miss)
+            print("Relative miss = {:.10f}".format(min_relative_error))
+            # Note: Extra logging can be removed if too verbose later.
 
-    smallest_relative_miss = float('inf')  # Tracks smallest relative miss found
-    best_x = best_y = best_z = 0           # Store best match
-    best_miss = 0                          # Store smallest absolute miss
+# All done; show the final best near-miss.
+print("\n================ Final Result ================")
+print("For exponent n =", exponent_n, "and with x, y in range [10, {}]:".format(upper_bound))
+print("Best combination: x =", opt_x, ", y =", opt_y, ", z =", opt_z)
+print("Absolute miss =", best_absolute_miss)
+print("Relative miss = {:.10f}".format(min_relative_error))
 
-    # Iterate over all valid x, y pairs
-    for x in range(10, k + 1):
-        for y in range(10, k + 1):
-            lhs = x ** n + y ** n  # Calculate left-hand side: x^n + y^n
-
-            # Find the integer z such that z^n is just below lhs
-            z = int(lhs ** (1 / n))
-
-            # Compute both z^n and (z+1)^n to find the closest
-            z_power = z ** n
-            z1_power = (z + 1) ** n
-
-            # Find the closest to lhs
-            miss = min(abs(lhs - z_power), abs(z1_power - lhs))
-            relative_miss = miss / lhs
-
-            # If this is the smallest relative miss so far, report it
-            if relative_miss < smallest_relative_miss:
-                smallest_relative_miss = relative_miss
-                best_x, best_y = x, y
-                best_z = z if abs(lhs - z_power) < abs(z1_power - lhs) else z + 1
-                best_miss = miss
-
-                # Display the new best near miss
-                print(f"\nNew smallest relative miss found:")
-                print(f"x = {best_x}, y = {best_y}, z = {best_z}, n = {n}")
-                print(f"Actual miss = {best_miss}")
-                print(f"Relative miss = {relative_miss:.10f}")
-
-    # Final result after all iterations
-    print("\n================ Final Result ================")
-    print(f"Best near miss for n = {n}, with x and y in range [10, {k}]:")
-    print(f"x = {best_x}, y = {best_y}, z = {best_z}")
-    print(f"Absolute miss = {best_miss}")
-    print(f"Relative miss = {smallest_relative_miss:.10f}")
-    input("\nPress Enter to exit the program...")  # Pause before exiting
-
+# Just to keep the console window open (especially useful in Windows environments)
+input("\nPress Enter to exit the program...")
 # Run the main function
 if __name__ == "__main__":
     main()
